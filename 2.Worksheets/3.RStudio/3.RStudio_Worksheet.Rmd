@@ -1,7 +1,7 @@
 ---
 title: '3\. Worksheet: Basic R'
-author: "Mark Hibbins; Z620: Quantitative Biodiversity, Indiana University"
-date: "`r format(Sys.time(), '%d %B, %Y')`"
+author: 'Mark Hibbins; Z620: Quantitative Biodiversity, Indiana University'
+date: '`r format(Sys.time(), "%d %B %Y")`'
 output: pdf_document
 geometry: margin=2.54cm
 ---
@@ -50,7 +50,7 @@ In the R code chunk below, please provide the code to:
 ```{r}
 remove(list=ls())
 getwd()
-setwd('/Users/mhibbins/Desktop/quant_biodiv/QB2019_Hibbins/2.Worksheets/3.Rstudio')
+setwd('C:/Users/Marcus/Box\ Sync/Courses/Quantitative\ Biodiversity/QB2019_Hibbins/2.Worksheets/3.RStudio/')
 
 ```
 
@@ -98,7 +98,7 @@ Now, do the following:
 ```{r}
 k <- c(4, 7, 10, 13, 16)
 k*w
-d <- c(w[1], k[1:3,4])
+d <- c(w[1:3], k[1:4])
 
 ```
 
@@ -108,19 +108,15 @@ In the R-code chunk below, calculate the **summary statistics** (i.e., maximum, 
 
 ```{r}
 v <- c(16.4, 16.0, 10.1, 16.8, 20.5, NA, 20.2, 13.1, 24.8, 20.2, 25.0, 20.5, 30.5, 31.4, 27.1)
-
-
-
-
-
-
-
-
-
-
-
-
-
+v <- na.omit(v)
+max(v)
+min(v)
+sum(v)
+mean(v)
+median(v)
+var(v)
+sd(v)
+sd(v)/sqrt(length(v))
 ```
 
 ## 5) WORKING WITH MATRICES
@@ -131,10 +127,10 @@ Both columns should consist of random numbers.
 Make the mean of the first column equal to 8 with a standard deviation of 2 and the mean of the second column equal to 25 with a standard deviation of 10.
 
 ```{r}
-
-
-
-
+column1 <- c(rnorm(5, mean = 8, sd = 2))
+column2 <- c(rnorm(5, mean = 25, sd = 10))
+columns <- c(column1, column2)
+matrix(data = columns, nrow = 5, ncol = 2, byrow = FALSE)
 
 ```
 
@@ -142,7 +138,7 @@ Make the mean of the first column equal to 8 with a standard deviation of 2 and 
 What do the arguments in this function specify? 
 Remember to use `help()` or type `?rnorm`.
 
-> Answer 1:
+> Answer 1: This function randomly samples the specified number of observations from a normal distribution with the specified mean and standard deviation. 
 
 
 In the R code chunk below, do the following: 
@@ -151,15 +147,16 @@ In the R code chunk below, do the following:
 3) Determine the dimensions of the transposed matrix.
 
 ```{r}
-
-
+m <- read.table('./data/matrix.txt')
+n <- t(m)
+dim(n)
 
 ```
 
 
 ***Question 2***: What are the dimensions of the matrix you just transposed?
 
-> Answer 2:
+> Answer 2: 10 rows by 5 columns.
 
 
 ###Indexing a Matrix
@@ -169,8 +166,8 @@ In the R code chunk below, do the following:
 2) Remove the last row of matrix `m`.
 
 ```{r}
-
-
+m[,c(1:2, 4:5)]
+m <- m[c(1:9),]
 ```
 
 ## 6) BASIC DATA VISUALIZATION AND STATISTICAL ANALYSIS
@@ -181,8 +178,8 @@ In the R code chunk below, do the following:
 2) Display the structure of this data set.
 
 ```{r}
-
-
+meso <- read.table('./data/zoop_nuts.txt', sep = '\t', header=TRUE)
+str(meso)
 ```
 
 ### Correlation
@@ -193,14 +190,16 @@ In the R-code chunk below, do the following:
 3) Conduct a simple **Pearson's correlation** analysis.
 
 ```{r}
-
-
+meso.num <- meso[,3:8]
+pairs(meso.num)
+cor1 <- cor(meso.num)
+cor1
 ```
 
 
 ***Question 3***: Describe some of the general features based on the visualization and correlation analysis above?
 
-> Answer 3:
+> Answer 3: Many variables appear to be highly correlated, with coefficients in the 60-95% range. There are also quite a few appreciable, but not huge, coefficients in the 10-30$ range. Some particular variable combinations have a low correlation coefficient. As far as signs go, the variable CHLA appears to be negatively correlated with all the other variables (to varying degrees), while all the other coefficients are positive. 
 
 
 In the R code chunk below, do the following:
@@ -209,9 +208,11 @@ In the R code chunk below, do the following:
 3) Use the print command from the handout to see the results of each correlation analysis.
 
 ```{r}
-
-
-
+require('psych')
+cor2 <- corr.test(meso.num, method = 'pearson', adjust = 'BH')
+print(cor2, digits = 3)
+cor3 <- corr.test(meso.num, method = 'spearman', adjust = 'BH')
+print(cor3, digits = 3)
 ```
 
 ***Question 4***: 
@@ -221,7 +222,7 @@ When should one use non-parametric methods instead of parametric methods?
 With the Pearson's method, is there evidence for false discovery rate due to multiple comparisons? 
 Why is false discovery rate important?
 
-> Answer 4: 
+> Answer 4: Using a non-parametric method does result in different coefficient estimates and p-values, but in this particular case, this effect does not appear to change our conclusions about the data. For Pearson's method, there is evidence for a false discovery rate, because the adjusted p-values above the diagonal are higher than the uncorrected p-values. P-values represent the probability that the data were generated under a given null hypothesis. Typically we reject the null for p-values below 0.05, but under this standard we will reject 5% of all datasets generated under the null hypothesis - these are false positives. For large datasets, 5% of results can represent a large number of p-values, so adjusting for this false positive rate is crucial. 
 
 ### Linear Regression
 
@@ -231,22 +232,26 @@ In the R code chunk below, do the following:
 3) Produce a plot of this regression analysis including the following: categorically labeled points, the predicted regression line with 95% confidence intervals, and the appropriate axis labels.
 
 ```{r}
-
-
-
-
-
-
+zoo_reg <- lm(ZP ~ TN, data = meso)
+summary(zoo_reg)
+require(ggplot2)
+lm_plot <- ggplot(meso, aes(x = TN, y = ZP))
+lm_plot <- lm_plot + geom_point()
+lm_plot <- lm_plot + geom_smooth(method=lm)
+lm_plot <- lm_plot + geom_text(aes(label=NUTS), hjust=2)
+lm_plot <- lm_plot + labs(x = expression(paste('Total Nitrogen (', mu, 'g/L)')),
+                          y = 'Zooplankton Biomass (mg/L)')
+lm_plot
 
 ```
 
 ***Question 5***: Interpret the results from the regression model
 
-> Answer 5:
+> Answer 5: The slope of the relationship between TN and ZP is significantly (p = 0.00001911) different from 0. The estimate of 0.0013 means that for every 1 ug/L increase in total nitrogen, the zooplankton biomass increases by 0.001 mg/L. Based on the plots below, there do not appear to be any serious violations of the assumptions of linear regression. 
 
 
 ```{r}
-
+plot(zoo_reg)
 ```
 
 ### Analysis of Variance (ANOVA)
@@ -259,12 +264,23 @@ Using the R code chunk below, do the following:
 
 
 ```{r}
+meso$NUTS <- factor(meso$NUTS, levels = c('L', 'M', 'H'))
 
-
-
-
-
-
+sem <- function(y) {
+  se <- sd(y)/sqrt(length(y))
+  mu <- mean(y)
+  c(ymin = mu-se, ymax = mu+se)
+}
+nut_barplot <- ggplot(meso, aes(x = NUTS, y = ZP))
+nut_barplot <- nut_barplot + stat_summary(fun.y = mean, geom = 'bar')
+nut_barplot <- nut_barplot + stat_summary(fun.data = sem, 
+                                          geom = 'errorbar',
+                                          width = 0.1)
+nut_barplot <- nut_barplot + labs(x = 'Nutrient supply',
+                                  y = 'Zooplankton biomass (mg/L)')
+nut_barplot
+mesoanova <- aov(ZP ~ NUTS, data = meso)
+summary(mesoanova)
 
 ```
 
@@ -295,11 +311,27 @@ The remaining columns of data refer to the biomass (µg/L) of different zooplank
 ***Question 6***: With the visualization and statistical tools that we learned about in the **3. RStudio** handout, use the site-by-species matrix to assess whether and how different zooplankton taxa were responsible for the total biomass (ZP) response to nutrient enrichment. 
 Describe what you learned below in the "Answer" section and include appropriate code in the R chunk.
 
+> Answer 6: Based on the barplot and ANOVA analysis presented below, it seems likely that the trends in total biomass are driven mostly by the CHYD variable, whuch are Chydorus zooplankton. In fact, the mean biomass of this taxonomic group is not significantly different (p = 0.457) from the mean total biomass across all species. 
+
 ```{r}
+zoops <- read.table('./data/zoops.txt', header = TRUE)
+zoops <- zoops [,c(3:11)]
+zoops$total <- rowSums(zoops)
+require(reshape2)
+zoops.long <- melt(zoops)
 
+zoops_barplot <- ggplot(zoops.long, aes(x = variable, y = value))
+zoops_barplot <- zoops_barplot + stat_summary(fun.y = mean, geom = 'bar')
+zoops_barplot <- zoops_barplot + stat_summary(fun.data = sem, 
+                                          geom = 'errorbar',
+                                          width = 0.1)
+zoops_barplot <- zoops_barplot + labs(x = 'Taxon',
+                                  y = 'Zooplankton biomass (mg/L)')
+zoops_barplot
 
-
-
+zoopsanova <- aov(value ~ variable, data = zoops.long)
+summary(zoopsanova)
+TukeyHSD(zoopsanova)
 ```
 
 ## SUBMITTING YOUR WORKSHEET
