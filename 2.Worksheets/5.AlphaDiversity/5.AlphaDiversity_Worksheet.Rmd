@@ -36,9 +36,10 @@ In the R code chunk below, please provide the code to:
 4) Load the `vegan` R package (be sure to install first if you haven't already).
 
 ```{r}
-
-
-
+remove(list=ls())
+getwd()
+setwd('/Users/mhibbins/Desktop/quant_biodiv/QB2019_Hibbins/2.Worksheets/5.AlphaDiversity')
+library(vegan)
 
 ```
 
@@ -49,8 +50,8 @@ In the R code chunk below, do the following:
 2) Display the structure of the dataset (if the structure is long, use the `max.level = 0` argument to show the basic information).
 
 ```{r}
-
-
+data(BCI)
+str(BCI, max.level = 0)
 ```
 
 ## 3) SPECIES RICHNESS
@@ -69,17 +70,22 @@ In the R code chunk below, do the following:
 
 ```{r}
 
-# S.obs <- function(   ){
-#   rowSums(     ) * 
-#   }
+S.obs <- function(x){
+   rowSums(x > 0) * 1
+   }
 
+S.obs(BCI[1,])
+specnumber(BCI[1,])
+
+specnumber(BCI[2,])
+specnumber(BCI[3,])
+specnumber(BCI[4,])
 ```
 
 ***Question 1***: Does `specnumber()` from `vegan` return the same value for observed richness in `site1` as our function `S.obs`?
 What is the species richness of the first four sites (i.e., rows) of the BCI matrix?
 
-> ***Answer 1***:
-
+> ***Answer 1***: specnumber() and the S.obs function return the same value (as they should). The richness for the first four sites are 93, 84, 90, and 94. 
 
 
 ### Coverage: How well did you sample your site?
@@ -91,8 +97,11 @@ In the R code chunk below, do the following:
 2. Use that function to calculate coverage for all sites in the BCI matrix.
 
 ```{r}
+C = function(x) {
+  1 - (sum(x == 1) / sum(x))
+}
 
-
+apply(BCI, 1, C)
 ```
   
 ***Question 2***: Answer the following questions about coverage:
@@ -102,13 +111,13 @@ b.  What would we conclude from Good's Coverage if $n_{i}$ equaled *N*?
 c.  What portion of taxa in `site1` was represented by singletons? 
 d.  Make some observations about coverage at the BCI plots.
 
-> ***Answer 2a***:  
+> ***Answer 2a***:  Because Good's Coverage is calculated as a proportion, it should be a value between 0 and 1.
 
-> ***Answer 2b***:  
+> ***Answer 2b***:  If ni equals N, then Good's coverage will equal 0, meaning every individual in the sample belongs to its own species that was only sampled once. This is not good sampling coverage. 
 
-> ***Answer 2c***:  
+> ***Answer 2c***:  Approximately 7% (1 - 0.93)
 
-> ***Answer 2d***:  
+> ***Answer 2d***:  The values of coverage for this dataset are in the range of 85-95%, meaning that the majority of individuals at each site belong to a species that is sampled at least twice. 
 
 
 ### Estimated richness
@@ -127,10 +136,14 @@ In the R code chunk below, do the following:
 
 ```{r}
 
+soilbac <- read.table('data/soilbac.txt', sep = '\t', header = TRUE, row.names = 1)
 
+soilbac_transpose <- as.data.frame(t(soilbac))
+soilbac3 <- soilbac_transpose[3,]
 
-
-
+sum(soilbac3)
+specnumber(soilbac3)
+C(soilbac3)
 
 ```
 
@@ -140,12 +153,11 @@ a.  How many sequences did we recover from the sample `soilbac1`, i.e. *N*?
 b.  What is the observed richness of `soilbac1`? 
 c.  How does coverage compare between the BCI sample (`site1`) and the KBS sample (`soilbac1`)?
 
-> ***Answer 3a***:  
+> ***Answer 3a***: 2533
 
-> ***Answer 3b***: 
+> ***Answer 3b***: 1174
 
-> ***Answer 3c***:  
-
+> ***Answer 3c***:  The coverage for the KBS sample is much lower (67.3% vs. 93%)
 
 ### Richness estimators
 
@@ -161,7 +173,9 @@ In the R code chunk below, do the following:
 
 ```{r}
 
-
+S.chao1 <- function(x){
+  specnumber(x) + (sum(x == 1)^2) / (2 * sum(x == 2))
+}
 
 
 
