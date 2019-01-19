@@ -1,6 +1,6 @@
 ---
 title: '5\. Worksheet: Alpha Diversity'
-author: "Student Name; Z620: Quantitative Biodiversity, Indiana University"
+author: "Mark Hibbins; Z620: Quantitative Biodiversity, Indiana University"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: pdf_document
 geometry: margin=2.54cm
@@ -38,7 +38,7 @@ In the R code chunk below, please provide the code to:
 ```{r}
 remove(list=ls())
 getwd()
-setwd('/Users/mhibbins/Desktop/quant_biodiv/QB2019_Hibbins/2.Worksheets/5.AlphaDiversity')
+setwd('/Users/mark/Box Sync/Courses/Quantitative Biodiversity/QB2019_Hibbins/2.Worksheets/5.AlphaDiversity')
 library(vegan)
 
 ```
@@ -177,16 +177,47 @@ S.chao1 <- function(x){
   specnumber(x) + (sum(x == 1)^2) / (2 * sum(x == 2))
 }
 
+S.chao2 <- function(site, SbyS){
+  SbyS = as.data.frame(SbyS)
+  x = SbyS[site,]
+  SbyS_presenceabsence <- (SbyS > 0) * 1
+  Q1 = sum(colSums(SbyS_presenceabsence) == 1)
+  Q2 = sum(colSums(SbyS_presenceabsence) == 2)
+  S.chao2 <- S.obs(x) + (Q1^2)/(2*Q2)
+  return(S.chao2)
+}
 
+S.ace <- function(x, threshold){
+  x <- x[x>0]
+  S_abund <- length(which(x > threshold))
+  S_rare <- length(which(x <= threshold))
+  singletons <- length(which(x == 1))
+  N_rare <- sum(x[which(x <= threshold)])
+  C_ace <- 1 - (singletons / N_rare)
+  i <- c(1:threshold)
+  count <- function(i, y){
+    length(y[y == i])
+  }
+  a_1 <- sapply(i, count, x)
+  f_1 <- (i * (i-1)) * a_1
+  G_ace <- (S_rare/C_ace)*(sum(f_1)/(N_rare*(N_rare-1)))
+  S_ace <- S_abund + (S_rare/C_ace) + (singletons/C_ace) * max(G_ace,0)
+  return(S_ace)
+}
 
+site1 <- BCI[1,]
 
-
-
+S.chao1(site1)
+S.chao1(soilbac3)
+S.chao2(site = 1, SbyS = BCI)
+S.chao2(site = 3, SbyS = soilbac_transpose)
+S.ace(site1, 10)
+S.ace(soilbac3, 10)
 ```
 
 ***Question 4***: What is the difference between ACE and the Chao estimators? Do the estimators give consistent results? Which one would you choose to use and why?
 
-> ***Answer 4***:
+> ***Answer 4***: The ACE estimator defines a threshold for comparison of rare vs. common species, while the Chao estimators use singletons and doubletons. The Chao 1 and ACE estimators seem to give roughly similar estimates, while the Chao 2 estimator reports a much larger value for soilbac3. This is probably because the Chao 2 estimator reports richness across multiple sites, and sampling coverage for an invidual site in the soilbac data is lower. All the estimators seem to operate best under different circumstances. but the ACE estimator is less intuitive and also cannot be effectively used in datasets where there are many species with few samples. Therefore, for most situations I would probably use one of the Chao estimators.  
 
 
 
