@@ -38,7 +38,7 @@ In the R code chunk below, please provide the code to:
 ```{r}
 remove(list=ls())
 getwd()
-setwd('/Users/mark/Box Sync/Courses/Quantitative Biodiversity/QB2019_Hibbins/2.Worksheets/5.AlphaDiversity')
+setwd('C:/Users/Marcus/Box Sync/Courses/Quantitative Biodiversity/QB2019_Hibbins/2.Worksheets/5.AlphaDiversity')
 library(vegan)
 
 ```
@@ -237,12 +237,12 @@ In the R code chunk below, please do the following:
 
 
 ```{r}
-
-
-
-
-
-
+soilbac_S <- S.obs(soilbac_transpose)
+min_N <- min(rowSums(soilbac_transpose))
+S_rarefy <- rarefy(x = soilbac_transpose, sample = min_N, se = TRUE)
+rarecurve(x = soilbac_transpose, step = 20, col = 'blue', cex = 0.6, las = 1)
+abline(0, 1, col = 'red')
+text(1500, 1500, '1:1', pos = 2, col = 'red')
 ```
 
 
@@ -265,11 +265,12 @@ In the R code chunk below, do the following:
 
 ```{r}
 
-
-
-
-
-
+RAC <- function(x){
+  x = as.vector(x)
+  x_ab = x[x > 0]
+  x_ab_ranked = x_ab[order(x_ab, decreasing = TRUE)]
+  return(x_ab_ranked)
+}
 
 ```
 
@@ -283,17 +284,25 @@ In the R code chunk below, do the following:
 
 ```{r}
 
+plot.new()
 
+rac <- RAC(site1)
+ranks = as.vector(seq(1, length(rac)))
+opar <- par(no.readonly = TRUE)
+par(mar = c(5.1, 5.1, 4.1, 2.1))
+plot(ranks, log(rac), type = 'p', axes = F, xlab = 'Rank in abundance', ylab = 'Abundance', las = 1, cex.lab = 1.4, cex.axis = 1.25)
 
+box()
+axis(side = 1, labels = T, cex.axis = 1.25)
+axis(side = 2, las = 1, cex.axis = 1.25, labels = c(1, 2, 5, 10, 20), at = log(c(1, 2, 5, 10, 20)))
 
-
+par <- opar
 
 ```
 
 ***Question 5***: What effect does visualizing species abundance data on a log-scaled axis have on how we interpret evenness in the RAC?
 
-> ***Answer 5***:
-
+> ***Answer 5***: When visualized on the log scale, it makes it look as though the decay in abundance is linear. This is compounded by the fact that the plot is made using points spread horizontally around each rank value. When interpreting figures with a log y-axis we must keep in mind that trends that look linear on a log scale are not actually linear in absolute scale. 
 
 Now that we have visualized unevennes, it is time to quantify it using Simpson's evenness ($E_{1/D}$) and Smith and Wilson's evenness index ($E_{var}$).
 
@@ -307,12 +316,15 @@ In the R code chunk below, do the following:
 
 ```{r}
 
+SimpE <- function(x){
+  S <- S.obs(x)
+  x = as.data.frame(x)
+  D <- diversity(x, 'inv')
+  E <- (D)/S
+  return(E)
+}
 
-
-
-
-
-
+SimpE(site1)
 
 ```
 
@@ -328,8 +340,12 @@ In the R code chunk below, please do the following:
 
 ```{r}
 
+Evar <- function(x){
+  x <- as.vector(x[x > 0])
+  1 - (2/pi)*atan(var(log(x)))
+}
 
-
+Evar(site1)
 
 
 
@@ -338,7 +354,7 @@ In the R code chunk below, please do the following:
 ***Question 6***: Compare estimates of evenness for `site1` of BCI using $E_{1/D}$ and $E_{var}$.
 Do they agree? If so, why? If not, why? What can you infer from the results.
 
-> ***Answer 6***:
+> ***Answer 6***: The evenness estimated by $E_{var}$ is higher than for $E_{1/D}$. Since the rank-abundance curve for this dataset appears to operate on a log-scale, $E_{var}$ removes the bias introduced by the more abundant species. resulting in a more even metric. If we compared the figure above on a log-scale y axis to another figure on a linear axis, we would see qualitatively that the abundance curve in the log figure is more even. 
 
 
 ##5) INTEGRATING RICHNESS AND EVENNESS: DIVERSITY METRICS
@@ -357,13 +373,19 @@ In the R code chunk below, please do the following:
 
 ```{r}
 
+ShanH <- function(x){
+  H = 0
+  for (n_i in x){
+    if(n_i > 0){
+      p = n_i / sum(x)
+      H = H - p*log(p)
+    }
+  }
+  return(H)
+}
 
-
-
-
-
-
-
+ShanH(site1)
+diversity(site1, index = 'shannon')
 
 ```
 
@@ -379,24 +401,26 @@ In the R code chunk below, please do the following:
 
 ```{r}
 
+SimpD <- function(x){
+  D = 0
+  N = sum(x)
+  for (n_i in x){
+    D = D + (n_i^2)/(N^2)
+  }
+  return(D)
+}
 
-
-
-
-
-
-
-
-
-
-
+1/SimpD(site1)
+1-SimpD(site1)
+diversity(site1, 'inv')
+diversity(site1, 'simp')
 
 ```
 
 ***Question 7***: Compare estimates of evenness for `site1` of BCI using $E_{H'}$ and $E_{var}$.
 Do they agree? If so, why? If not, why? What can you infer from the results.
 
-> ***Answer 7***:
+> ***Answer 7***: (This is a duplicate of question 6, see above)
 
 ### Fisher's $\boldsymbol\alpha$
 
@@ -408,23 +432,17 @@ In the R code chunk below, please do the following:
 
 ```{r}
 
-
-
-
-
-
-
-
-
-
-
-
+rac <- as.vector(site1[site1 > 0])
+invD <- diversity(rac, 'inv')
+invD
+Fisher <- fisher.alpha(rac)
+Fisher
 
 ```
 
 ***Question 8***: How is Fisher's $\boldsymbol\alpha$ different from $E_{H'}$ and $E_{var}$? What does Fisher's $\boldsymbol\alpha$ take into account that $E_{H'}$ and $E_{var}$ do not?
 
-> ***Answer 8***:
+> ***Answer 8***: Fisher's $\boldsymbol\alpha$ is fitted statistically from the data, it can explicitly account for the effects of sampling bias on estimates of species diversity. $E_{H'}$ and $E_{var}$ are summary statistics that only describe the data at hand. 
 
 ##6) MOVING BEYOND UNIVARIATE METRICS OF $\alpha$ DIVERSITY
 
@@ -449,9 +467,11 @@ In the R code chunk below, please do the following:
 
 ```{r}
 
+RACresults <- radfit(site1)
+RACresults
 
-
-
+plot.new()
+plot(RACresults, las = 1, cex.lab = 1.4, cex.axis = 1.25)
 
 ```
 
@@ -460,22 +480,23 @@ In the R code chunk below, please do the following:
 a) Based on the output of `radfit()` and plotting above, discuss which model best fits our rank-abundance curve for `site1`?
 b) Can we make any inferences about the forces, processes, and/or mechanisms influencing the structure of our system, e.g., an ecological community?
 
-> ***Answer 9a***:  
-> ***Answer 9b***:
+> ***Answer 9a***:  All three summary statistics for model fit (deviance, AIC, and BIC), have their lowest values for the Mandelbrot model. Therefore, this model best fits the rank-abundance curve for site1. 
+
+> ***Answer 9b***: The Mandelbrot model is a methodological extension of the Zipf model, which includes a parameter to control the evenness of the rank abudance curve. The Zipf model is based on Zipf's law, which is an empirical description of a pattern that is consistently observed in ranked data, rather than a model of actual ecological processes. Therefore, while the Mandelbrot model fits the data best, I don't think it provides much insight into ecological processes. We would have to provide a biological explanation for why rank-abundance curves follow Zipf's law. 
 
 
 ***Question 10***: Answer the following questions about the preemption model:
 a.  What does the preemption model assume about the relationship between total abundance (*N*) and total resources that can be preempted?
 b.  Why does the niche preemption model look like a straight line in the RAD plot?
 
-> ***Answer 10a***:  
-> ***Answer 10b***:
+> ***Answer 10a***:  It assumes that total abundance is directly proportional to total resources, because the parameter for resource consumption $\alpha$ causes the value of N to decay in the equation. 
 
+> ***Answer 10b***: In the log scale, the preemption model is described by a simple linear equation: $log(a_{r}) = log(N) + log(\alpha) + (r-1)log(1 - \alpha)$. Therefore, when we plot the model fit on a figure with a log-scale y axis, it looks linear. 
 
 
 ***Question 11***: Why is it important to account for the number of parameters a model uses when judging how well it explains a given set of data?
 
-> ***Answer 11***:
+> ***Answer 11***: When fitting models, there is always a tradeoff between bias and variance. A model with less parameters introduces bias because it does not capture all the information contained in the data. However, it has fewer degrees of freedom, and therefore less variance, potentially improving its performance when introduced to new data. Models with a large number of parameters will always fit a specific dataset better, because they can capture more information and reduce bias. However, with more degrees of freedom, they become more sensitive to new variance introduced in other datasets, reducing their predictive power; this phenomenon is called overfitting. Penalizing models with a large number of parameters is desirable to prevent overfitting, even if they may explain more of the variance for a specific dataset. 
 
 
 ## SYNTHESIS
@@ -483,10 +504,36 @@ b.  Why does the niche preemption model look like a straight line in the RAD plo
 1.  As stated by Magurran (2004) the  ${D = } \sum p_i^2$ derivation of Simpson's Diversity only applies to communities of infinite size. For anything but an infinitely large community, Simpson's Diversity index is calculated as ${D = } \sum \frac{n_i(n_i -1)} {N(N-1)}$. 
 Assuming a finite community, calculate Simpson's D, 1 - D, and Simpson's inverse (i.e. 1/D) for `site 1` of the BCI site-by-species matrix. 
 
+```{r}
+
+SimpD_fin <- function(x){
+  D = 0
+  N = sum(x)
+  for (n_i in x){
+    D = D + ((n_i)*(n_i - 1))/((N)*(N-1))
+  }
+  return(D)
+}
+
+SimpD_fin(site1)
+1/SimpD_fin(site1)
+1-SimpD_fin(site1)
+
+```
+
+
 2.  Along with the rank-abundance curve (RAC), another way to visualize the distribution of abundance among species is with a histogram (a.k.a., frequency distribution) that shows the frequency of different abundance classes.
 For example, in a given sample, there may be 10 species represented by a single individual, 8 species with two individuals, 4 species with three individuals, and so on.
 In fact, the rank-abundance curve and the frequency distribution are the two most common ways to visualize the species-abundance distribution (SAD) and to test species abundance models and biodiversity theories.
 To address this homework question, use the R function **hist()** to plot the frequency distribution for `site 1` of the BCI site-by-species matrix, and describe the general pattern you see.
+
+> ***Answer***: As seen in the histogram below, the vast majority of species are quite rare, with abundances between 0 and 2. Then, there are a much smaller number of more abundant species. Generally, this is the same trend observed in the rank-abundance curve from earlier. 
+
+```{r}
+
+hist(t(site1))
+
+```
 
 3.  We asked you to find a biodiversity dataset with your partner.
 This data could be one of your own or it could be something that you obtained from the literature. 
@@ -494,6 +541,16 @@ Load that dataset.
 How many sites are there?
 How many species are there in the entire site-by-species matrix?
 Any other interesting observations based on what you learned this week?
+
+```{r}
+
+library(readr)
+epiphytes <- read_csv("data/epiphytes.csv")
+epiphytes <- epiphytes[,1:42]
+
+```
+
+> ***Answer**: This dataset has 72 sites, with 36 species across the whole matrix. Based on examining the matrix, some of the species have much lower sampling than others, so we will probably have to do some kind of rarefaction to account for that. 
 
 ## SUBMITTING YOUR ASSIGNMENT
 Use Knitr to create a PDF of your completed alpha_assignment.Rmd document, push it to GitHub, and create a pull request.
