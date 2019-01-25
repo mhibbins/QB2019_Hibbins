@@ -39,6 +39,15 @@ Make sure to annotate your code using # symbols so others (including instructors
 
 ```{r}
 
+#Load the dataset 
+
+setwd('/Users/mhibbins/Desktop/quant_biodiv/QB2019_Hibbins/2.Worksheets/6.DiversitySampling/')
+
+JellyBeans <- read.delim("~/Desktop/quant_biodiv/QB2019_Hibbins/2.Worksheets/6.DiversitySampling/JellyBeans.txt", header=TRUE)
+
+
+#Preliminary exploration; basic diversity metrics across the matrix 
+
 
 
 
