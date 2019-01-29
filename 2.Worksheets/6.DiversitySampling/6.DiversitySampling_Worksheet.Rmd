@@ -37,6 +37,7 @@ Use the space below for code that is being used to analyze your data and test yo
 Create one (and only one, although it can have multiple panels) *publication quality* figure. 
 Make sure to annotate your code using # symbols so others (including instructors) understand what you have done and why you have done it. 
 
+<<<<<<< HEAD
 ### Workspace setup 
 ```{r}
 #Workspace setup 
@@ -55,6 +56,9 @@ JellyBeans <- read.delim("~/Desktop/quant_biodiv/QB2019_Hibbins/2.Worksheets/6.D
 
 
 #Preliminary exploration; basic diversity metrics across the matrix 
+=======
+```{r} 
+>>>>>>> ea09760ddb56c9b247be2d4a357ca9522b11c55e
 
 >>>>>>> b3f6d763e4f89400c558561cc2dc466e37f19f91
 
