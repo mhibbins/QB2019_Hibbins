@@ -41,10 +41,22 @@ Make sure to annotate your code using # symbols so others (including instructors
 ```{r}
 #Workspace setup 
 
+<<<<<<< HEAD
 setwd("/Users/mark/Box Sync/Courses/Quantitative Biodiversity/QB2019_Hibbins/2.Worksheets/6.DiversitySampling")
 library(vegan)
 library(dplyr)
 library(readr)
+=======
+#Load the dataset 
+
+setwd('/Users/mhibbins/Desktop/quant_biodiv/QB2019_Hibbins/2.Worksheets/6.DiversitySampling/')
+
+JellyBeans <- read.delim("~/Desktop/quant_biodiv/QB2019_Hibbins/2.Worksheets/6.DiversitySampling/JellyBeans.txt", header=TRUE)
+
+
+#Preliminary exploration; basic diversity metrics across the matrix 
+
+>>>>>>> b3f6d763e4f89400c558561cc2dc466e37f19f91
 
 JellyBeans <- read_delim("~/Box Sync/Courses/Quantitative Biodiversity/QB2019_Hibbins/2.Worksheets/6.DiversitySampling/JellyBeans.txt", 
      "\t", escape_double = FALSE, trim_ws = TRUE) #load class collected data
