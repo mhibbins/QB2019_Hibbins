@@ -37,16 +37,7 @@ Use the space below for code that is being used to analyze your data and test yo
 Create one (and only one, although it can have multiple panels) *publication quality* figure. 
 Make sure to annotate your code using # symbols so others (including instructors) understand what you have done and why you have done it. 
 
-```{r}
-
-#Load the dataset 
-
-setwd('/Users/mhibbins/Desktop/quant_biodiv/QB2019_Hibbins/2.Worksheets/6.DiversitySampling/')
-
-JellyBeans <- read.delim("~/Desktop/quant_biodiv/QB2019_Hibbins/2.Worksheets/6.DiversitySampling/JellyBeans.txt", header=TRUE)
-
-
-#Preliminary exploration; basic diversity metrics across the matrix 
+```{r} 
 
 
 
