@@ -42,7 +42,7 @@ In the R code chunk below, provide the code to:
 ```{r}
 remove(list=ls())
 getwd()
-setwd('/Users/mhibbins/Desktop/quant_biodiv/QB2019_Hibbins/2.Worksheets/8.BetaDiversity')
+setwd('/Users/mark/Box Sync/Courses/Quantitative Biodiversity/QB2019_Hibbins/2.Worksheets/8.BetaDiversity')
 library(vegan)
 
 
@@ -246,9 +246,10 @@ doubs.pcnm.mod0 <- dbrda(fish.db ~ 1, doubs.space)
 doubs.pcnm.mod1 <- dbrda(fish.db ~ ., doubs.space)
 step.pcnm <- ordiR2step(doubs.pcnm.mod0, 
                         doubs.pcnm.mod1, 
-                        perm.max = 200)
+                        perm.max = 200,
+                        trace = FALSE)
 
-#step.pcnm$anova #used output to make model
+#step.pcnm$anova #info used to make model
 
 space.mod <- model.matrix( ~ PCNM2 
                            + PCNM3
@@ -259,21 +260,66 @@ space.mod <- model.matrix( ~ PCNM2
                            + PCNM6, 
                            doubs.space)[,-1]
 
+#Constrained ordinations 
+doubs.total.env <- dbrda(fish.db ~ env.mod)
+doubs.total.space <- dbrda(fish.db ~ space.mod)
+
+#Partial constrained ordinations 
+doubs.env.cond.space <- dbrda(fish.db ~ env.mod + Condition(space.mod))
+doubs.space.cond.env <- dbrda(fish.db ~ space.mod + Condition(env.mod))
+
+#Permutation tests for signififance 
+permutest(doubs.env.cond.space, permutations = 999)
+permutest(doubs.space.cond.env, permutations = 999)
+permutest(doubs.total.env, permutations = 999)
+permutest(doubs.total.space, permutations = 999)
+
+#Partitioning of variance
+doubs.varpart <- varpart(fish.db, env.mod, space.mod)
+
+#Plot
+par(mar = c(2,2,2,2))
+plot(doubs.varpart)
+text(1, 0.25, 'Space')
+text(0, 0.25, 'Env')
+mtext('Variation Partitioning of Doubs Fish Diversity',
+      side = 3, 
+      line = -3)
 
 ```
 
 ***Question 4***: Interpret the variation partitioning results.   
 
-> ***Answer 4***: 
+> ***Answer 4***: Out of the total variance in fish diversity in the Doubs river, 13% is explained by environmental variation, 24% is explained by geographical space, 37% is explained by environmental variation over space, and the remaining 27% is unexplained. 
 
 ## SYNTHESIS
 
 1) Using the jelly bean data from class (i.e., JellyBeans.txt), perform a PERMANOVA to test whether or not the vicariance event (random splitting of source community) had an affect on jelly bean composition.
 Based on your previous analyses with this data set, what are your thoughts about the importance of stochastic vs. deterministic factors on estimates of biodiversity?
+```{r}
+JellyBeans <- read.delim("~/Box Sync/Courses/Quantitative Biodiversity/QB2019_Hibbins/2.Worksheets/6.DiversitySampling/JellyBeans.txt")
+
+group <- c(rep('A', 3), rep('B', 2), 'A', 'B', 'A', 'B')
+
+Jellybeans <- JellyBeans[3:30]
+
+adonis(Jellybeans ~ group, method = 'bray', permutations = 999)
+```
+> This analysis returned a similar p-value to the t-test performed in beta diversity 1. There appears to be a marginally significant effect of the vicariance event on the jelly bean community. This analysis shows that if the sampling effort is small enough, stochastic forces can have a significant effect on measures of biodiversity, and potentially bias results. While only marginally significant in this case, if it was paired with some other deterministic effect it could generate a misleadingly low p-value. It is therefore important to control for stochastic factors (ie. random effects) when doing these tests. 
 
 2) Load the dataset you are using for your Team Project. 
 Perform an ordination to visualize your dataset.
 Using this ordination, develop some hypotheses relevant to $\beta$-diversity.
 Use a statistic to test one of these hypotheses.
 Succinctly explain the finding and its relevance to your system.
+```{r}
 
+#Load dataset
+epiphytes <- read.csv("~/Box Sync/Courses/Quantitative Biodiversity/QB2019_Hibbins/2.Worksheets/5.AlphaDiversity/data/epiphytes.csv")[1:42]
+
+epiphytes_SbyS <- epiphytes[,c(7:42)]
+
+#Ordination (PCoA analysis)
+
+
+```
