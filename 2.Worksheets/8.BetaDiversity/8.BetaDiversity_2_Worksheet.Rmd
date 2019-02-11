@@ -317,9 +317,110 @@ Succinctly explain the finding and its relevance to your system.
 #Load dataset
 epiphytes <- read.csv("~/Box Sync/Courses/Quantitative Biodiversity/QB2019_Hibbins/2.Worksheets/5.AlphaDiversity/data/epiphytes.csv")[1:42]
 
-epiphytes_SbyS <- epiphytes[,c(7:42)]
+epiphytes_SbyS <- epiphytes[,c(7:42)] #make site-by-species matrix
+epiphytes_SbyS <- epiphytes_SbyS[c(1:70),] #remove empty rows 
 
-#Ordination (PCoA analysis)
+#Ordination (PCoA)
 
+epiphytes.db <- vegdist(epiphytes_SbyS, #make resemblance matrix 
+                        method = 'bray', 
+                        upper = TRUE, 
+                        diag = TRUE) 
 
+epiphytes.pcoa <- cmdscale(epiphytes.db, eig = TRUE, k = 3) #do the PCoA
+
+epiphytes_var1 <- round(epiphytes.pcoa$eig[1] / #Calculate explained variance 
+                          sum(epiphytes.pcoa$eig), 3) * 100
+epiphytes_var2 <- round(epiphytes.pcoa$eig[2] / 
+                          sum(epiphytes.pcoa$eig), 3) * 100
+epiphytes_var3 <- round(epiphytes.pcoa$eig[3] / 
+                          sum(epiphytes.pcoa$eig), 3) * 100
+sum.eig <- sum(epiphytes_var1, epiphytes_var2, epiphytes_var3)
+
+#PCoA Plot 
+
+par(mar = c(5, 5, 1, 2) + 0.1) #plot parameters 
+
+plot(epiphytes.pcoa$points[ ,1], #initialize plot
+     epiphytes.pcoa$points[ ,2],
+     ylim = c(-0.6, 0.5),
+     xlab = paste('PCoA 1(', epiphytes_var1, '%)', sep = ''),
+     ylab = paste('PCoA 2(', epiphytes_var2, '%)', sep = ''),
+     pch = 16, cex = 2.0, type = 'n', cex.lab = 1.5, 
+     cex.axis = 1.2, axes = FALSE)
+
+axis(side = 1, labels = T, lwd.ticks = 2, cex.axis = 1.2, #add axis borders
+     las = 1)
+axis(side = 2, labels = T, lwd.ticks = 2, cex.axis = 1.2, 
+     las = 1)
+abline(h = 0, v = 0, lty = 3)
+box(lwd = 2)
+
+points(epiphytes.pcoa$points[ ,1], epiphytes.pcoa$points[ ,2], #add points and site labels
+       pch = 19, cex = 3, bg = 'gray', col = 'gray')
+text(epiphytes.pcoa$points[ ,1], epiphytes.pcoa$points[ ,2],
+     labels = row.names(epiphytes.pcoa$points))
 ```
+
+> The epiphyte communities do not seem to fall into highly discrete clusters, but there is clearly a lot of differentiation between them. This leads me to believe the community composition is driven by continuous environmental variables. Our dataset contains four of these; tree structure, wood density, deciduousness, and rugosity. I will test this hypothesis using the Mantel test and a constrained ordination analysis. 
+
+```{r}
+
+epiphytes_env.db <- vegdist(scale(epiphytes[c(1:70),c(3:6)]), #environment distance matrix
+                            method = 'euclid')
+
+mantel(epiphytes.db, epiphytes_env.db) #Mantel test 
+
+epiphytes.env <- as.matrix(epiphytes[c(1:70),c(3:6)]) #site-by-environment matrix 
+
+epiphytes.dbrda <- dbrda(epiphytes.db ~ ., as.data.frame(epiphytes.env)) #Distance-based redundancy analysis
+ordiplot(epiphytes.dbrda) #ordination plot 
+```
+
+> None of the variables appear highly correlated in this plot, so I'll go ahead and add the vectors to the PCoA plot. 
+
+```{r}
+epi_dbrda.var1 <- round(epiphytes.dbrda$CCA$eig[1] / #Calculate explained variance 
+                          sum(epiphytes.pcoa$eig), 3) * 100
+epi_dbrda.var2 <- round(epiphytes.dbrda$CCA$eig[2] / 
+                          sum(epiphytes.pcoa$eig), 3) * 100
+
+#dbRDA Plot 
+
+par(mar = c(5, 5, 1, 2) + 0.1) #plot parameters 
+
+plot(scores(epiphytes.dbrda, display = 'wa'),
+     ylim = c(-5, 2),
+     xlab = paste('dbRDA 1 (', epi_dbrda.var1, '%)', sep = ''),
+     ylab = paste('dbRDA 2 (', epi_dbrda.var2, '%)', sep = ''),
+     pch = 16, cex = 2.0, type = 'n', cex.lab = 1.5, 
+     cex.axis = 1.2, axes = FALSE)
+
+axis(side = 1, labels = T, lwd.ticks = 2, cex.axis = 1.2, #add axis borders
+     las = 1)
+axis(side = 2, labels = T, lwd.ticks = 2, cex.axis = 1.2, 
+     las = 1)
+abline(h = 0, v = 0, lty = 3)
+box(lwd = 2)
+
+points(scores(epiphytes.dbrda, display = 'wa'), #add points and site labels
+       pch = 19, cex = 3, bg = 'gray', col = 'gray')
+text(scores(epiphytes.dbrda, display = 'wa'),
+     labels = row.names(scores(epiphytes.dbrda, display = 'wa')))
+
+vectors <- scores(epiphytes.dbrda, display = 'bp')
+arrows(0, 0, vectors[,1], vectors[,2], lwd = 2,
+       lty = 1, length = 0.2, col = 'red')
+text(vectors[,1], vectors[,2], pos = 3,
+     labels = row.names(vectors))
+axis(side = 3, lwd.ticks = 2, cex.axis = 1.2,
+     las = 1, col = 'red', lwd = 2.2, 
+     at = pretty(range(vectors[,1]))*2,
+     labels = pretty(range(vectors[,1])))
+axis(side = 4, lwd.ticks = 2, cex.axis = 1.2,
+     las = 1, col = 'red', lwd = 2.2, 
+     at = pretty(range(vectors[,2]))*2,
+     labels = pretty(range(vectors[,2])))
+```
+
+> These analyses show that the continuous environmental variables do have a significant effect on community composition, but overall explain only a small amount (~10%) of the variance. Our first two principal components explain approximately 40% of the variation, so there must be additional factors at work. The taxonomic identity of the host tree and status as native vs. exotic must play an important role. 
