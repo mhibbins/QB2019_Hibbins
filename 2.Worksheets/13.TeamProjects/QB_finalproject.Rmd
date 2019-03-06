@@ -1,0 +1,307 @@
+---
+title: "Epiphyte diversity in a tropical urban habitat"
+subtitle: "Quantitative Biodiversity 2019"
+author: "Diego Rios, Mark Hibbins"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+
+Our study sought to answer two primary questions: what is the structure of this urban epiphyte community, and how it is affected by the environment, space, and phylogeny? To answer these questions, we first did a cluster analysis of the epiphyte community, and created a cophylogeny of the epiphytes with their host trees, to gain a sense of the broad-scale patterns. Then, we did a phylogenetic distance-based redundancy analysis and a variation partitioning analysis, to statistically test the effects of environment and space on phylogenetic beta-diversity. 
+
+## Cluster analysis 
+
+To understand overall patterns of epiphyte abundance, we first performed a clustering analysis using the Bray-Curtis distance between sites. First, we setup the workspace: 
+
+```{r}
+rm(list=ls())
+getwd()
+setwd('/Users/mark/Box Sync/Courses/Quantitative Biodiversity/epiphyte_diversity')
+
+#load packages 
+package.list <- c('vegan','ade4', 'viridis', 'gplots', 'BiodiversityR', 'indicspecies',
+                  'readr')
+for (package in package.list) {
+  if (!require(package, character.only = TRUE, quietly = TRUE)) {
+    install.packages(package)
+    library(package, character.only = TRUE)
+  }
+}
+
+epiphytes <- read_csv("data/epiphytes.csv") #read in dataset
+
+envTrees <- epiphytes[,c(1:6)]
+trees <- envTrees[-c(71,72),1]
+epiphytes <- epiphytes[-c(71,72),c(-1:-9)]
+rownames(epiphytes) <- as.character(trees$Phorophyte)
+```
+Then, we construct a heat map and cluster diagram using the log of epiphyte abundance: 
+```{r}
+epiphytes <- log(1+epiphytes) #log transformation to smooth out values
+
+epiphytes.db <- vegdist(epiphytes, method = "bray", upper = TRUE, diag = TRUE) #distance matrix 
+order <- rev(attr(epiphytes.db, "Labels")) #Order of labels
+
+#Heat map
+levelplot(as.matrix(epiphytes.db)[, order], aspect = "iso",col.regions = inferno, 
+          xlab = "Phorophyte", ylab = "Phorophyte", scales = list(cex = 0.5),
+          main = "Bray-Curtis Distance")
+
+epiphytes.ward <- hclust(epiphytes.db, method = "ward.D2") #horizontal ward's clustering for the trees
+
+#Cluster diagram 
+par(mar = c(1,5,2,2)+0.1)
+gplots::heatmap.2(as.matrix(epiphytes), distfun = function(x) vegdist(x, method= "bray"),
+                  hclustfun = function(x) hclust(x, method = "ward.D2"),
+                  col = viridis, trace = "none", density.info="none")
+```
+
+These figures reveal some important patterns in our dataset. First, we observe a classic rank-abundance relationship for the epiphytes; a few species are highly abundant, and the majority are relatively rare. Second, the horizontal cluster of trees appears to fall into two major clusters which roughly correspond to deciduousness, ie. whether trees shed their leaves during the dry season. This gives us some initial insights into the factors that may be driving assembly in this community. 
+
+## Cophylogeny 
+
+One of the interesting properties of our dataset is that each "site" in the site by species matrix corresponds to a taxon of host tree for the epiphytes. Therefore, it is interesting and useful to consider the coevolutionary dynamics between these trees and the epiphytes they host. To this end, we constructed neighbour-joining trees for both groups using sequences from the chloroplast gene maturase K, which is often used for plant DNA barcoding. We then built a cophylogeny to show the co-occurences between trees and epiphytes in a phylogenetic context. First, we load the required packages:
+```{r}
+package.list <- c('ape', 'seqinr', 'phylobase', 'adephylo', 'geiger', 'picante', 'stats', 'RColorBrewer',
+                  'caper', 'phylolm', 'pmc', 'ggplot2', 'tidyr', 'dplyr', 'phangorn', 'pander', 'phyloseq') 
+for (package in package.list) {
+  if (!require(package, character.only=TRUE, quietly=TRUE)) {
+    install.packages(package)
+    library(package, character.only=TRUE)
+  }
+}
+```
+
+Next, we read in the alignment files and use them to build neighbour-joining phylogenies. Our alignments were generated using the software 'muscle' with the default parameters. 
+```{r}
+ep.aln <- read.alignment(file = './data/epiphytesCRv2_align.fasta', format = 'fasta') #read in alignment file
+ep.DNAbin <- as.DNAbin(ep.aln) #convert to DNAbin object
+window <- ep.DNAbin[, 0:3000] #pick window to view
+image.DNAbin(window, cex.lab = 0.5) #visualize alignment 
+
+ep.dist <- dist.dna(ep.DNAbin[ ,1500:2400], model = 'K80', #make DNA distance matrix using K80 model
+                    pairwise.deletion = FALSE, as.matrix = TRUE)
+ep.nj.tree <- bionj(ep.dist) #make tree object 
+outgroup <- match('Sphagnum', ep.nj.tree$tip.label) #define outgroup sequence
+ep.nj.tree.rooted <- root(ep.nj.tree, outgroup, resolve.root = TRUE) #root the tree 
+
+par(mar = c(1,1,2,1) + 0.1) 
+plot.phylo(ep.nj.tree.rooted, main = 'Neighbour Joining Tree', 'phylogram', 
+           use.edge.length = FALSE, direction = 'right', 
+           cex = 0.6, label.offset = 1)
+add.scale.bar(cex = 0.7)
+
+#Neighbour joining tree for the trees:
+
+tree.aln <- read.alignment(file = './data/trees_align.fasta', format = 'fasta') #read in alignment file
+tree.DNAbin <- as.DNAbin(tree.aln) #convert to DNAbin object
+window <- tree.DNAbin[, 0:2500] #pick window to view
+image.DNAbin(window, cex.lab = 0.5) #visualize alignment 
+
+tree.dist <- dist.dna(tree.DNAbin[ ,1300:2000], model = 'K80', #make DNA distance matrix using K80 model
+                    pairwise.deletion = FALSE, as.matrix = TRUE)
+tree.nj.tree <- bionj(tree.dist) #make tree object 
+outgroup <- match('Pinus', tree.nj.tree$tip.label) #define outgroup sequence
+tree.nj.tree.rooted <- root(tree.nj.tree, outgroup, resolve.root = TRUE) #root the tree 
+  
+par(mar = c(1,1,2,1) + 0.1) 
+plot.phylo(tree.nj.tree.rooted, main = 'Neighbour Joining Tree', 'phylogram', 
+           use.edge.length = FALSE, direction = 'right', 
+           cex = 0.6, label.offset = 1)
+add.scale.bar(cex = 0.7)
+```
+Finally, we construct a co-ocurrence matrix and use it alongside the phylogenies to build a cophlyogeny:
+```{r}
+#reload epiphytes data
+epiphytes <- read.csv("data/epiphytes.csv")
+
+epiphytes$Phorophyte <- gsub('_([^_]*)$', '', epiphytes$Phorophyte) #cleaning up phorophyte names
+
+trees_cophylo <- vector() #empty vectors for storing co-occurences 
+epi_cophylo <- vector() 
+
+phorophyte_spp <- epiphytes$Phorophyte #list of phorophyte entries
+
+epiphytes <- epiphytes[ ,c(10:45)] #SbyS
+
+epiphytes_spp <- colnames(epiphytes) #list of epiphyte species 
+
+for (i in 1:nrow(epiphytes)) {# for each tree entry 
+  for (j in 1:ncol(epiphytes)) {# for each epiphyte species
+    if(epiphytes[i,j] > 0){ #if the epiphyte is present 
+      if(phorophyte_spp[i] %in% tree.nj.tree.rooted$tip.label) { #check if spp in tree files
+        if(epiphytes_spp[j] %in% ep.nj.tree.rooted$tip.label) {
+          trees_cophylo <- append(trees_cophylo, phorophyte_spp[i]) #store the tree name
+          epi_cophylo <- append(epi_cophylo, epiphytes_spp[j]) #and the epiphyte name
+        }
+      }
+    }
+  }
+}
+
+cophylo_matrix <- as.data.frame(unique(matrix(c(trees_cophylo,epi_cophylo), 
+                                              nrow=371, ncol=2))) #make co-ocurrence matrix
+
+cophyloplot(tree.nj.tree.rooted, ep.nj.tree.rooted, assoc = cophylo_matrix, 
+            space = 400, length.line = 0, show.tip.label = FALSE)
+```
+
+This plot reveals some interesting information about the coevolutionary dynamics between trees (left) and the epiphytes they host (right) (tip labels not shown for clarity). Specifically, it tells us how specialized each epiphyte species is to host trees, and whether this specialization has a phylogenetic signal. For the epiphytes on the right, we can clearly see that the more generalist epiphytes (with many branches coming out of the tips) fall into phylogenetic clusters. One of these clusters, in the bottom half of the tree, contains epiphytes in the genus Tillandsia, which also contain the most abundant species. In constrast, there does not appear to be a strong phylogenetic signal in terms of specialization for the trees in which epiphyte species they prefer to host. 
+
+## Phylogenetic distance-based redundancy analysis 
+
+Using our phylogenetic data, we can test whether phylogenetic beta diversity is affected by the suite of life history traits we have for both the tree and epiphyte species. Our response matrix for this analysis is abundance-weighted UniFrac distance, as estimated through the `phyloseq` package. First, we need to load in our data and set up the site-by-environment matrix:
+
+```{r}
+#epiphyte community data
+epiphytes <- read.csv("~/Box Sync/Courses/Quantitative Biodiversity/epiphyte_diversity/data/epiphytes.csv")
+
+#epiphyte natural history traits
+epiphyte_nat_hist <- read.csv("~/Box Sync/Courses/Quantitative Biodiversity/epiphyte_diversity/data/epiphyte_nat_hist.csv")
+colnames(epiphyte_nat_hist)[colnames(epiphyte_nat_hist)=='Ornamental'] <- 'ep.ornamental' #rename ornamental variable
+epiphyte_nat_hist <- t(epiphyte_nat_hist)[c(1:8), c(2:37)] #transpose and cleanup 
+colnames(epiphyte_nat_hist) <- as.character(unlist(epiphyte_nat_hist[1,])) #taxa as headers
+epiphyte_nat_hist <- epiphyte_nat_hist[c(2:8),] #removed taxa variable
+
+epiphytes_align <- read.alignment(file = './data/epiphytesCRv2_align.fasta',  #epiphytes alignment file
+                                  format = 'fasta') 
+
+epiphytes_SbyS <- epiphytes[c(1:70), c(8:43)] #epiphyte site-by-species matrix 
+epiphytes_SbyS <- epiphytes_SbyS[ , order(names(epiphytes_SbyS))] #alphabetical sort by species name
+
+#Missing taxa: Pteridophyta, Phlebodium, Pleopeltis sp 2
+
+epiphytes_SbyE <- epiphytes[c(1:70), c(2:7)] #First part of site-by-environment matrix
+colnames(epiphytes_SbyE)[colnames(epiphytes_SbyE)=='Ornamental'] <- 'tree.ornamental' #rename ornamental variable
+
+total_abundances <- rowSums(epiphytes_SbyS) #total epiphyte abundance across sites 
+
+for (i in 1:nrow(epiphyte_nat_hist)){ #for each trait
+  trait <- t(epiphyte_nat_hist[i,]) #store species values for trait 
+  traitname <- rownames(epiphyte_nat_hist)[i] #name of trait under consideration
+  mean_relative_traits <- vector() #vector to store mean relative trait value for each site
+  
+  for (j in 1:nrow(epiphytes_SbyS)){ #for each site in the site by species matrix
+    relative_abundances <- epiphytes_SbyS[j,] / total_abundances[j] #relative abundances for the site
+    relative_traits <- as.numeric(relative_abundances) * as.numeric(trait) #relativized trait values
+    rel_traits <- vector() #vector to store mean relativized trait values
+    
+    for (k in 1:length(relative_traits)){ #for each relativized trait value
+      if(relative_abundances[k] > 0){ #if the species is present
+        rel_traits <- append(rel_traits, relative_traits[k]) #add the relative trait value for the species
+      }
+    }
+    mean_relative_traits <- append(mean_relative_traits, mean(rel_traits)) #get weighted mean trait value for each site
+  }
+  epiphytes_SbyE[[traitname]] <- mean_relative_traits #assign traits to columns in site-by-environment matrix 
+}
+
+epiphytes_SbyE <- scale(epiphytes_SbyE) #normalize (z-normalization) the site-by-environment matrix 
+``` 
+
+Now, we can do our phylogenetic dbRDA (which includes model selection):
+```{r}
+epi_SbyS_otu <- otu_table(epiphytes_SbyS, taxa_are_rows = FALSE) #make otu_table-class object (phyloseq package)
+ep.physeq <- phyloseq(epi_SbyS_otu, ep.nj.tree.rooted) #create physeq object from SbyS + tree
+ep.dist.uf <- UniFrac(ep.physeq, weighted = TRUE) #weighted UniFrac distance matrix (phyloseq package)
+
+ep.env.dist <- vegdist(epiphytes_SbyE, method = 'euclid') #environment distance matrix
+mantel(ep.dist.uf, ep.env.dist) #Mantel test
+
+epiphytes_phylo_dbrda_int <- vegan::dbrda(ep.dist.uf ~ 1, data = as.data.frame(epiphytes_SbyE)) #intercept-only model
+epiphytes_phylo_dbrda_full <- vegan::dbrda(ep.dist.uf ~ ., data = as.data.frame(epiphytes_SbyE)) #full model
+
+epiphytes_phylo_dbrda <- ordiR2step(epiphytes_phylo_dbrda_int, epiphytes_phylo_dbrda_full, perm.max = 200)
+
+ep_dbrda_explainvar1 <- round(epiphytes_phylo_dbrda$CCA$eig[1] / #variation explained on first two axes
+                                sum(c(epiphytes_phylo_dbrda$CCA$eig, epiphytes_phylo_dbrda$CA$eig)), 3) * 100
+ep_dbrda_explainvar2 <- round(epiphytes_phylo_dbrda$CCA$eig[2] / 
+                                sum(c(epiphytes_phylo_dbrda$CCA$eig, epiphytes_phylo_dbrda$CA$eig)), 3) * 100
+
+#Plotting the dbrda
+
+par(mar = c(5, 5, 4, 4) + 0.1)
+
+plot(scores(epiphytes_phylo_dbrda, display = 'wa'), xlim = c(-2, 2), ylim = c(-2, 2),
+     xlab = paste('dbRDA 1 (', ep_dbrda_explainvar1, '%)', sep = ''),
+     ylab = paste('dbRDA 2 (', ep_dbrda_explainvar2, '%)', sep = ''), pch = 16,
+     cex = 2.0, type = 'n', cex.lab = 1.5, cex.axis = 1.2, axes = FALSE
+     )
+
+axis(side = 1, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+axis(side = 2, labels = T, lwd.ticks = 2, cex.axis = 1.2, las = 1)
+abline(h = 0, v = 0, lty = 3)
+box(lwd = 2)
+
+points(scores(epiphytes_phylo_dbrda, display = 'wa'),
+       pch = 19, cex = 3, bg = 'gray', col = 'gray')
+text(scores(epiphytes_phylo_dbrda, display = 'wa'),
+     labels = row.names(scores(epiphytes_phylo_dbrda, display = 'wa')), cex = 0.5)
+
+vectors <- scores(epiphytes_phylo_dbrda, display = 'bp')
+
+arrows(0, 0, vectors[,1] * 2, vectors[, 2] * 2, 
+       lwd = 2, lty = 1, length = 0.2, col = "red")
+text(vectors[,1] * 2, vectors[, 2] * 2, pos = 3, 
+     labels = row.names(vectors))
+axis(side = 3, lwd.ticks = 2, cex.axis = 1.2, las = 1, col = "red", lwd = 2.2,
+     at = pretty(range(vectors[, 1])) * 2, labels = pretty(range(vectors[, 1])))
+axis(side = 4, lwd.ticks = 2, cex.axis = 1.2, las = 1, col = "red", lwd = 2.2,
+     at = pretty(range(vectors[, 2])) * 2, labels = pretty(range(vectors[, 2])))
+```
+
+The best model for phylogenetic beta diversity contains only two predictors, both of which are characteristics of the host tree species: deciduousness and tree structure. Seeing deciduousness in this model is consistent with the broad groupings we saw in our cluster diagram, and it also makes sense biologically, since the presence or absence of leaves during certain parts of the year affects the microclimate of the host tree. The other variable, tree structure, is a compound variable that can encapsulate many factors, including the age of the tree and the kinds of spatial niches that may be available for epiphytes to grow. 
+
+It is somewhat surprising that none of the epiphyte life history traits turned up as important in the final model. The reasonable interpretation of this seems to be that they are tightly correlated to tree traits, rather than being unimportant in structuring epiphyte communities.
+
+## Variation partitioning 
+
+Our final analysis was variation partitioning of phylogenetic beta diversity into environmental and spatial components. This analysis gives us some idea of how our life history traits interact with space to affect the epiphyte community. 
+
+```{r}
+
+#Space
+ep.x <- epiphytes[-c(71,72),8]/min(epiphytes[-c(71,72),8])
+ep.y <- epiphytes[-c(71,72),9]/max(epiphytes[-c(71,72),9])
+ep.xy <- cbind(ep.x,ep.y)
+
+ep.coords <- pcnm(dist(ep.xy), dist.ret = T)
+ep.coords$values > 0
+ep.space <- as.data.frame(scores(ep.coords))
+ep.pcnm.mod0 <- dbrda(ep.dist.uf ~ 1, ep.space)
+ep.pcnm.mod1 <- dbrda(ep.dist.uf ~ ., ep.space)
+step.pcnm <- ordiR2step(ep.pcnm.mod0, ep.pcnm.mod1, perm.max = 200)
+
+plot(step.pcnm)
+step.pcnm$anova
+
+
+space.mod <- model.matrix(~ PCNM2 + PCNM1 + PCNM8, ep.space)[,-1]
+env.mod <- model.matrix(~ Tree_structure + Deciduousness, as.data.frame(epiphytes_SbyE))[,-1]
+
+ep.total.env <- dbrda(ep.dist.uf ~ env.mod)
+ep.total.space <- dbrda(ep.dist.uf ~ space.mod)
+
+#partial constrained ordinations
+ep.env.cond.space <- dbrda(ep.dist.uf ~ env.mod + Condition(space.mod))
+ep.space.cond.space <- dbrda(ep.dist.uf ~ space.mod + Condition(env.mod))
+
+#significance
+permutest(ep.env.cond.space, permutations = 999)
+permutest(ep.space.cond.space, permutations = 999)
+permutest(ep.total.env, permutations = 999)
+permutest(ep.total.space, permutations = 999)
+
+ep.varpart <- varpart(ep.dist.uf, env.mod, space.mod)
+
+
+ep.varpart
+par(mar = c(2,2,2,2))
+plot(ep.varpart)
+text(1, 0.25, "Space")
+text(0, 0.25, "Environment")
+mtext("Variation Partinioning of\nEpiphyte Diversity", side = 3, line = -3)
+#dev.off()
+```
+
+The results of this analysis suggest that 1) the individual effects of environment and space are about equally important; 2) there is no variation explained by the covariance of environment and space. The second finding is somewhat surprising, since we might expect environmental variables to vary over space. However, our dataset is unique in that our environmental variables are all biotic, and may not vary with space in a predictable manner like abiotic factors would. It is also possible that our study site is too small for environment-space relationships to manifest, although this seems unlikely. 
